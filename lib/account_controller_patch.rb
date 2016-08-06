@@ -1,6 +1,7 @@
 module AccountControllerRecaptchaPatch
   def self.included(base)
     base.class_eval do
+      # User self-registration
       def register
         (redirect_to(home_url); return) unless Setting.self_registration? || session[:auth_source_registration]
         if request.get?
@@ -10,6 +11,7 @@ module AccountControllerRecaptchaPatch
           user_params = params[:user] || {}
           @user = User.new
           @user.safe_attributes = user_params
+          @user.pref.attributes = params[:pref] if params[:pref]
           @user.admin = false
           @user.register
           if session[:auth_source_registration]
@@ -29,12 +31,12 @@ module AccountControllerRecaptchaPatch
             end
             if verify_recaptcha(:model => @user, :private_key => Setting.plugin_recaptcha['recaptcha_private_key'])
               case Setting.self_registration
-              when '1'
-                register_by_email_activation(@user)
-              when '3'
-                register_automatically(@user)
-              else
-                register_manually_by_administrator(@user)
+                when '1'
+                  register_by_email_activation(@user)
+                when '3'
+                  register_automatically(@user)
+                else
+                  register_manually_by_administrator(@user)
               end
             else
               flash.delete(:recaptcha_error)
